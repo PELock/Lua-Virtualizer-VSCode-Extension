@@ -1,0 +1,533 @@
+{
+	"name": "lua-virtualizer",
+	"displayName": "Lua Virtualizer",
+	"publisher": "PELock",
+	"description": "Virtualize, obfuscate & protect Lua scripts with code virtualization, finite-state machine (FSM) transforms, weave tape, self-integrity checks, and anti-debugging.",
+	"version": "1.0.0",
+	"icon": "images/icon-lua-virtualizer-128.png",
+	"license": "Apache-2.0",
+	"homepage": "https://www.pelock.com/products/lua-virtualizer",
+	"bugs": {
+		"url": "https://www.pelock.com/contact",
+		"email": "support@pelock.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/PELock/Lua-Virtualizer-VSCode-Extension"
+	},
+	"engines": {
+		"vscode": "^1.85.0"
+	},
+	"categories": [
+		"Programming Languages",
+		"Other"
+	],
+	"keywords": [
+		"lua",
+		"luau",
+		"wlua",
+		"obfuscator",
+		"obfuscation",
+		"obfuscate",
+		"virtualization",
+		"virtualizer",
+		"vm",
+		"fsm",
+		"weave",
+		"anti-debug",
+		"self-defending",
+		"protection",
+		"script",
+		"pelock"
+	],
+	"activationEvents": [
+		"onLanguage:lua"
+	],
+	"main": "./src/extension.js",
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": true,
+			"restrictedConfigurations": [
+				"luaVirtualizer.apiKey"
+			]
+		},
+		"virtualWorkspaces": {
+			"supported": true
+		}
+	},
+	"contributes": {
+		"configuration": [
+			{
+				"title": "Lua Virtualizer",
+				"properties": {
+					"luaVirtualizer.apiKey": {
+						"type": "string",
+						"default": "",
+						"maxLength": 32,
+						"order": 1,
+						"markdownDescription": "Enter your [activation code](https://www.pelock.com/products/lua-virtualizer/buy) (API key). Leave empty to run in **Demo mode** — only flat code virtualization is applied, other options are ignored, and scripts are limited to 1000 bytes."
+					},
+					"luaVirtualizer.enableCompression": {
+						"type": "boolean",
+						"default": true,
+						"order": 2,
+						"markdownDescription": "Compress source code before sending it to the Web API (recommended for large scripts). Both the request and the virtualized response are compressed."
+					},
+					"luaVirtualizer.seed": {
+						"type": "number",
+						"default": 0,
+						"minimum": 0,
+						"order": 3,
+						"markdownDescription": "Optional fixed random seed for reproducible virtualization. `0` leaves the seed unset (a new seed each run)."
+					},
+					"luaVirtualizer.randomizationDensity": {
+						"type": "number",
+						"default": 100,
+						"minimum": 0,
+						"maximum": 100,
+						"order": 4,
+						"markdownDescription": "Randomization density / intensity (`0`–`100`). Higher values apply more of each probabilistic transform."
+					},
+					"luaVirtualizer.target": {
+						"type": "string",
+						"enum": [
+							"auto",
+							"5.1",
+							"5.2",
+							"5.3",
+							"5.4",
+							"5.5",
+							"luajit",
+							"luau"
+						],
+						"enumDescriptions": [
+							"Automatic",
+							"5.1",
+							"5.2",
+							"5.3",
+							"5.4",
+							"5.5",
+							"LuaJIT",
+							"Luau"
+						],
+						"default": "auto",
+						"order": 5,
+						"markdownDescription": "**Dialect**\n\nAutomatic tries the source as 5.1, then 5.2, 5.3, 5.4, 5.5, then Luau, and keeps the oldest dialect that parses. LuaJIT is not inferred. A script whose only newer feature is goto is detected as 5.2, because goto arrived in Lua 5.2. Choose LuaJIT explicitly when the script must be treated as LuaJIT."
+					},
+					"luaVirtualizer.codeVirtualizationEnabled": {
+						"type": "boolean",
+						"default": true,
+						"order": 6,
+						"markdownDescription": "**Code virtualization**\n\nEnable the selected virtualization mode. Uncheck to emit ordinary Lua while keeping the last mode saved."
+					},
+					"luaVirtualizer.codeVirtualization": {
+						"type": "string",
+						"enum": [
+							"vm",
+							"fsm",
+							"weave",
+							"flat",
+							"rnd"
+						],
+						"enumDescriptions": [
+							"Virtualize code",
+							"Finite-State Machine (FSM)",
+							"Weave tape",
+							"Mix code flow",
+							"Random VM, FSM, or WEAVE"
+						],
+						"default": "vm",
+						"order": 7,
+						"markdownDescription": "Virtualization mode applied when **Code virtualization** is enabled: `vm`, `fsm`, `weave`, `flat`, or `rnd`. `rnd` picks VM, FSM, or WEAVE for that run. FLAT is not in the draw."
+					},
+					"luaVirtualizer.renameStyle": {
+						"type": "string",
+						"enum": [
+							"il",
+							"o0",
+							"hex",
+							"mangled"
+						],
+						"enumDescriptions": [
+							"Identifier-like (e.g. Il1Il1)",
+							"O/0 confusion (e.g. O0oO0)",
+							"Hexadecimal (e.g. x4f2a1)",
+							"Mangled (e.g. a, b, aa)"
+						],
+						"default": "il",
+						"order": 8,
+						"markdownDescription": "Rename style used by the rename strategies: `il` (Il1…), `o0` (O0o…), `hex`, or `mangled`."
+					}
+				}
+			},
+			{
+				"title": "Lua Virtualizer: Protection",
+				"properties": {
+					"luaVirtualizer.selfDefending": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Protection against tampering with protected code (integrity verification)**\n\nFinal anti-tamper pass inserts an integrity probe that fingerprints the loaded chunk. Decrypt and trip keys are derived from that live token — edits poison later transforms (garbage instead of plaintext). Optional re-verify hashes the same chunk again. The probe does not need a separate copy of the script on disk."
+					},
+					"luaVirtualizer.protectionLinker": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Protection linker (decoy call graph, requires self-defending)**\n\nLate pass linking protected helpers: honeypot resolvers, bogus calls with random args, and shallow-stack tripwires active only before bootstrap. Normal runs unchanged; extracted snippets stay noisy."
+					}
+				}
+			},
+			{
+				"title": "Lua Virtualizer: Renaming",
+				"properties": {
+					"luaVirtualizer.renameVariables": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Rename variables**\n\nLocal and global variables become random identifiers; every reference updates together. Scope rules preserved."
+					},
+					"luaVirtualizer.renameParameters": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Rename parameters**\n\nParameter names and in-body bindings rewritten to opaque tokens."
+					},
+					"luaVirtualizer.renameFunctions": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Rename functions**\n\nFunction definitions renamed and calls retargeted; metamethods such as `__index` and built-in library functions stay untouched."
+					},
+					"luaVirtualizer.renameFunctionCalls": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Retarget function calls through an indirect name table**\n\nDirect call sites are rewritten to look up the target through a name/dispatch table instead of the literal identifier."
+					},
+					"luaVirtualizer.shuffleFunctions": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Shuffle function order**\n\nPermutes top-level function definitions when execution order still remains valid."
+					},
+					"luaVirtualizer.resolveConstants": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Resolve and inline named constants**\n\nModule-level constant assignments are inlined at every use site and unused declarations removed."
+					}
+				}
+			},
+			{
+				"title": "Lua Virtualizer: Strings",
+				"properties": {
+					"luaVirtualizer.splitStrings": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Split strings into concatenated chunks**\n\nLiterals split and joined at runtime — whole tokens no longer appear in one place."
+					},
+					"luaVirtualizer.modifyStrings": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Modify strings with runtime character transforms**\n\nLiterals are rewritten as shifted characters rebuilt with a small runtime transform."
+					},
+					"luaVirtualizer.encryptStrings": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Encrypt strings using randomly generated polymorphic encryption algorithms**\n\nEach run emits a unique per-string decryptor with randomly chosen bitwise loops — no two outputs share the same algorithm shape."
+					},
+					"luaVirtualizer.stringCharArrayVault": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Char-code array vault**\n\nStrings rebuilt from numeric char codes instead of quoted text."
+					}
+				}
+			},
+			{
+				"title": "Lua Virtualizer: Numeric",
+				"properties": {
+					"luaVirtualizer.encryptIntegers": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Encrypt integers**\n\nPlain integers become equivalent arithmetic or bitwise expressions."
+					},
+					"luaVirtualizer.encryptFloating": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Encrypt floating point numbers**\n\nRewrites floating-point literals into equivalent `math` expressions, so constants are no longer visible as plain numeric values."
+					},
+					"luaVirtualizer.integersToFloating": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Integers via floating-point math**\n\nWhole numbers reconstructed from `math` library float expressions and cast back with `math.floor`."
+					},
+					"luaVirtualizer.integersToArrays": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Move integers to arrays**\n\nValues stored in tables and read by index alongside decoy entries."
+					},
+					"luaVirtualizer.floatsToArrays": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Move floats to arrays**\n\nFloats lifted into table slots with decoy values mixed in."
+					},
+					"luaVirtualizer.affineIntegerMask": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Redundant xor / affine masks**\n\nReversible bit masks wrap integers without changing the result. The helper matches the selected dialect."
+					},
+					"luaVirtualizer.mbaBinops": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Mixed boolean-arithmetic (MBA) operator rewriting**\n\nBinary operators are replaced with equivalent mixed boolean-arithmetic identities, hiding the original operator from static pattern matching."
+					}
+				}
+			},
+			{
+				"title": "Lua Virtualizer: Encrypted array literals",
+				"properties": {
+					"luaVirtualizer.arrayIntCrypt": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Encrypt literal integer list contents**\n\nInteger table contents are stored in encrypted form and decoded at runtime before use."
+					},
+					"luaVirtualizer.arrayCharCrypt": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Encrypt literal char list contents**\n\nCharacter table literals are replaced with encrypted values and restored only through generated decoder code."
+					},
+					"luaVirtualizer.arrayDoubleCrypt": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Encrypt literal float list contents**\n\nFloat table constants are hidden as encoded bit patterns and reconstructed while the program runs."
+					},
+					"luaVirtualizer.arrayStringCrypt": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Encrypt literal string list contents**\n\nString table elements are encrypted independently and rebuilt on demand by generated runtime code."
+					}
+				}
+			},
+			{
+				"title": "Lua Virtualizer: Decoy value pools",
+				"properties": {
+					"luaVirtualizer.insertRandomValueBucket": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Insert module-level decoy value pools**\n\nEnables the module-level noise pools controlled by the sub-options below."
+					},
+					"luaVirtualizer.randomBucketIntegers": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Decoy integer pool entries**\n\nUnused integer decoys added to the pool."
+					},
+					"luaVirtualizer.randomBucketArrays": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Decoy array pool entries**\n\nUnused table decoys added to the pool."
+					},
+					"luaVirtualizer.randomBucketFunctions": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Decoy function pool entries**\n\nUnused decoy functions added to the pool."
+					},
+					"luaVirtualizer.randomBucketCharacters": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Decoy character pool entries**\n\nUnused character decoys added to the pool."
+					},
+					"luaVirtualizer.randomBucketAntiRegex": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Decoy anti-regex noise entries**\n\nRegex-shaped decoy literals designed to distract naive static-signature scanners."
+					},
+					"luaVirtualizer.randomBucketAutostart": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Decoy autostart noise entries**\n\nDecoy string literals resembling autostart/persistence paths, never referenced by live code."
+					}
+				}
+			},
+			{
+				"title": "Lua Virtualizer: Opaque predicates & noise",
+				"properties": {
+					"luaVirtualizer.insertTernaryOperators": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Insert ternary operators**\n\nSimple branches collapse into conditional expressions, blending assignment logic into a single opaque line."
+					},
+					"luaVirtualizer.complexifyBooleans": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Complexify boolean conditions**\n\nSimple true/false tests rewritten into longer equivalent conditions."
+					},
+					"luaVirtualizer.opaqueBranches": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Opaque predicate branches**\n\nAlways-false branches that look like real control flow — increases graph complexity."
+					},
+					"luaVirtualizer.opaqueMixerChain": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Opaque mixer chains and unreachable guards**\n\nAdds static mixer functions, invokes chains of them inside functions, and emits guards that should never execute, increasing the amount of code a reader has to analyze."
+					},
+					"luaVirtualizer.insertDeadCode": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Dead code insertion**\n\nStatements under opaque never-true conditions — pads output without changing results."
+					},
+					"luaVirtualizer.tryFinallyNoise": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Try/finally noise**\n\nLua has no try/finally, so the pass emits an inert `pcall` plus cleanup. The extra nesting does not change values."
+					}
+				}
+			},
+			{
+				"title": "Lua Virtualizer: Decoys",
+				"properties": {
+					"luaVirtualizer.decoyFunctions": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Decoy functions**\n\nPlausible-looking functions that are never called — noise for reverse engineers."
+					},
+					"luaVirtualizer.lambdaDecoys": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Anonymous-function decoys**\n\nUnused anonymous function bindings near the top — never called at runtime."
+					},
+					"luaVirtualizer.literalPadding": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Literal string padding**\n\nBulky string constant shifts line numbers and inflates file size — never read by live logic."
+					},
+					"luaVirtualizer.fakeImportMarkers": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Fake require comment markers**\n\nComment lines mimic extra `require` dependencies. Removed when **Strip comments** is on."
+					},
+					"luaVirtualizer.dynamicGetattrCalls": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Dynamic table-lookup call indirection**\n\nCall targets are built from fragments and resolved through a table lookup, so a static search for the function name fails."
+					},
+					"luaVirtualizer.obfuscateImports": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Obfuscate require calls**\n\nRewrites `require` so the module name is built at runtime. The module-name strings remain available for later string encryption."
+					},
+					"luaVirtualizer.callbackRegistrationStubs": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Dead callback/handler registration stubs**\n\nSnippets resemble callback/handler registration setup but never wire a real event source."
+					}
+				}
+			},
+			{
+				"title": "Lua Virtualizer: Other",
+				"properties": {
+					"luaVirtualizer.detectDebugger": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Insert anti-debugging detections**\n\nDetect debuggers, virtual machines, sandboxed environments, CPU emulators.\n\nDetect debuggers attached to the process (`debug.gethook()`; Windows `IsDebuggerPresent`).\n\nThe added code runs at the beginning of the script. A positive detection silently terminates the process, without an error message."
+					},
+					"luaVirtualizer.antiSandbox": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Insert anti-sandbox detections**\n\nDetect debuggers, virtual machines, sandboxed environments, CPU emulators.\n\n- Check for an abnormally low number of CPU cores (exit if fewer than 3)\n- Sandboxie (DLL libraries `SbieDll` / `SbieHide`, registry)\n- Joe Sandbox (processes)\n- Analysis host / user / path / env tokens (Cuckoo and similar)\n\nThe added code runs at the beginning of the script. A positive detection silently terminates the process, without an error message."
+					},
+					"luaVirtualizer.antiVm": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Insert virtual machine (anti-VM) detections**\n\nDetect debuggers, virtual machines, sandboxed environments, CPU emulators.\n\n- VMware (processes, files, drivers, BIOS registry, MAC OUI, platform strings)\n- Oracle VirtualBox (processes, files, drivers, BIOS registry)\n- Parallels (processes, files)\n- KVM (drivers)\n- Linux DMI product/vendor strings when not on Windows\n\nThe added code runs at the beginning of the script. A positive detection silently terminates the process, without an error message."
+					},
+					"luaVirtualizer.antiEmulator": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Insert anti-emulators (CPU) detections**\n\nDetect debuggers, virtual machines, sandboxed environments, CPU emulators.\n\n- WINE (API inconsistencies, DLL libraries, special API functions)\n- Bochs / QEMU (processes, BIOS registry)\n- XEN (processes)\n- CPU/user-mode emulator markers and a short timing self-check\n\nThe added code runs at the beginning of the script. A positive detection silently terminates the process, without an error message."
+					},
+					"luaVirtualizer.removeComments": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "**Strip comments**\n\nComments (`--`) removed from the emitted script."
+					}
+				}
+			}
+		],
+		"commands": [
+			{
+				"command": "lua-virtualizer.virtualize",
+				"title": "Virtualize",
+				"category": "Lua Virtualizer",
+				"enablement": "editorLangId == lua || resourceExtname =~ /\\\\.(lua|luau|wlua)$/i"
+			},
+			{
+				"command": "lua-virtualizer.virtualizeContext",
+				"title": "Lua Virtualizer"
+			},
+			{
+				"command": "lua-virtualizer.virtualizeFunction",
+				"title": "Virtualize Function",
+				"category": "Lua Virtualizer"
+			}
+		],
+		"menus": {
+			"commandPalette": [
+				{
+					"command": "lua-virtualizer.virtualize",
+					"when": "editorLangId == lua || resourceExtname =~ /\\\\.(lua|luau|wlua)$/i"
+				},
+				{
+					"command": "lua-virtualizer.virtualizeContext",
+					"when": "false"
+				},
+				{
+					"command": "lua-virtualizer.virtualizeFunction",
+					"when": "false"
+				}
+			],
+			"editor/context": [
+				{
+					"command": "lua-virtualizer.virtualizeContext",
+					"when": "(editorLangId == lua || resourceExtname =~ /\\\\.(lua|luau|wlua)$/i) && editorTextFocus",
+					"group": "luaVirtualizer@1"
+				}
+			],
+			"explorer/context": [
+				{
+					"command": "lua-virtualizer.virtualizeContext",
+					"when": "resourceLangId == lua || resourceExtname =~ /\\\\.(lua|luau|wlua)$/i",
+					"group": "luaVirtualizer@1"
+				}
+			],
+			"editor/title/context": [
+				{
+					"command": "lua-virtualizer.virtualizeContext",
+					"when": "resourceLangId == lua || resourceExtname =~ /\\\\.(lua|luau|wlua)$/i",
+					"group": "luaVirtualizer@1"
+				}
+			]
+		},
+		"keybindings": [
+			{
+				"command": "lua-virtualizer.virtualize",
+				"key": "ctrl+alt+o",
+				"mac": "cmd+alt+o",
+				"when": "(editorLangId == lua || resourceExtname =~ /\\\\.(lua|luau|wlua)$/i) && editorTextFocus"
+			}
+		],
+		"grammars": [
+			{
+				"scopeName": "source.lua.luavirtualizer",
+				"path": "./syntaxes/lua-virtualizer.tmLanguage.json",
+				"injectTo": ["source.lua"]
+			}
+		]
+	},
+	"scripts": {
+		"generate:package": "node scripts/generate-package-json.js",
+		"lint": "eslint src test scripts",
+		"test:unit": "mocha --ui tdd --timeout 10000 \"test/unit/**/*.test.js\"",
+		"test": "node ./test/runTest.js"
+	},
+	"devDependencies": {
+		"@types/mocha": "^10.0.10",
+		"@types/node": "^20.14.10",
+		"@types/vscode": "^1.85.0",
+		"@vscode/test-electron": "^2.4.1",
+		"eslint": "^8.57.0",
+		"mocha": "^10.8.2"
+	}
+}

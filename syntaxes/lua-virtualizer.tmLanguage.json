@@ -1,0 +1,39 @@
+{
+	"scopeName": "source.lua.luavirtualizer",
+	"injectionSelector": "L:source.lua",
+	"patterns": [
+		{
+			"name": "meta.function-call.luavirtualizer",
+			"begin": "(?i)\\b(LUAVIRTUALIZER)\\s*(\\()",
+			"beginCaptures": {
+				"1": { "name": "entity.name.function.luavirtualizer" },
+				"2": { "name": "punctuation.definition.parameters.begin.luavirtualizer" }
+			},
+			"end": "\\)",
+			"applyEndPatternLast": true,
+			"endCaptures": {
+				"0": { "name": "punctuation.definition.parameters.end.luavirtualizer" }
+			},
+			"patterns": [
+				{
+					"begin": "(?i)\\b(VM|ENABLE|DISABLE)\\s*(\\()",
+					"beginCaptures": {
+						"1": { "name": "keyword.control.luavirtualizer" },
+						"2": { "name": "punctuation.definition.parameters.begin.luavirtualizer" }
+					},
+					"end": "\\)",
+					"applyEndPatternLast": true,
+					"endCaptures": {
+						"0": { "name": "punctuation.definition.parameters.end.luavirtualizer" }
+					},
+					"patterns": [
+						{
+							"match": "(?i)\\b[A-Za-z_][A-Za-z0-9_]*\\b",
+							"name": "support.constant.luavirtualizer"
+						}
+					]
+				}
+			]
+		}
+	]
+}
